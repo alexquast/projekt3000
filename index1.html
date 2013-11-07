@@ -1,0 +1,193 @@
+<html>
+<head>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.1/jquery.min.js"></script>
+    <script src="jquery.hammer.js"></script>
+    <script>
+    $(function(){
+
+        function log(text) {
+             $('#log').append(text + '<br>');
+        };
+
+        function handler(e) {
+            log(e.originalEvent.type);
+        };
+
+        $('#test').on('touchstart touchend click mousedown mouseup', handler);
+
+        function timeout() {
+            log('setting timeout');
+
+            var time1 = setTimeout(function () {
+                log('ready, timeout fired after 15 seconds');
+            }, 15000);
+
+            log('setting timer');
+            setInterval(function () {
+                log('timer -fired after 3 seconds');
+            }, 3000);
+
+        };
+
+
+        $('#timeout').on('click', timeout);
+
+        window.hammertime = new Hammer($('body'));
+
+        var pinching = false;
+        var pinchTargets = {first: false, second: false};
+        var first = true, newNode, currentHeight = 0, MAX = 60, currentColor = 0.02;
+        var lastScale = 1;
+
+        $('body').on('transform', function (event) {
+            event.preventDefault();
+            event.gesture.preventDefault();
+            event.gesture.stopPropagation();
+            // set pinching infos
+            if (!pinching && !(pinching.first && pinching.second)) {
+                // get new targets
+                var uid = $(event.target).attr('data-uid');
+                console.log(uid, pinchTargets);
+                // set as first pinch
+                if (!pinchTargets.first) {
+                    pinchTargets.first = uid;
+                } else if (!pinchTargets.second && (uid !== pinchTargets.first)) {
+                    pinchTargets.second = uid;
+                    pinching = true
+                }
+            }
+
+            if (pinching && first) {
+                // we got our targets, fill in a new cell between them
+                if (pinchTargets.second < pinchTargets.first) {
+                    var t = pinchTargets.second;
+                    pinchTargets.second = pinchTargets.first;
+                    pinchTargets.first = t;
+                }
+                newNode = $('<div class="cell">').css('height', '0px');
+                $('#'+  pinchTargets.first).after(newNode);
+                first = false;
+                currentHeight = 1; //newNode.height();
+
+            }
+
+            if (pinching && !first) {
+
+                console.log('height', currentHeight);
+                if ((currentHeight <= MAX) && (currentHeight >= 0)) {
+                    console.log('greate' , lastScale <= event.gesture.scale, 'smaller', lastScale >= event.gesture.scale)
+                    if (lastScale <= event.gesture.scale) {
+                        currentHeight = currentHeight + 2; //event.gesture.scale;
+                        console.log('increase to ', currentHeight);
+                    } else {
+                        currentHeight = currentHeight - 2; //event.gesture.scale;
+                        console.log('decrease to ', currentHeight);
+                    }
+                    lastScale = event.gesture.scale;
+                    console.log('last scale', lastScale);
+                    //currentHeight = currentHeight * 1.15;
+                    setHeight(newNode, currentHeight);
+
+                }
+
+            }
+
+            //console.log('pinching on', pinchTargets.first, pinchTargets.second);
+            //console.log(event.gesture.scale);
+        });
+
+        $('body').on('release', function (event) {
+            console.log('release event');
+            if (pinching) {
+                pinching = false;
+                pinchTargets = {first: false, second: false};
+                if (currentHeight < MAX) {
+                    newNode.remove();
+                } else {
+                    newNode.text('new Cell');
+                    newNode.removeAttr('style');
+                    recount();
+                }
+                newNode = null;
+                currentHeight = 1;
+                first = true;
+                lastScale = 1;
+            }
+        });
+
+
+    });
+
+    function setHeight(node, height) {
+        $(node).css('height', height + 'px');
+    };
+
+    function recount() {
+        var elems = $('#list').children();
+        for (var i = 0; i < elems.length; i++) {
+            $(elems[i]).attr({
+                'id': i,
+                'data-uid': i
+            });
+        }
+    };
+
+    function moveBlock(start, stop) {
+        var selector = '';
+        for (var i = start; i <= stop; i++) {
+            selector+= '[data-uid="'+ i +'"]';
+            if (i !== stop) {
+                selector+=',';
+            }
+        }
+        console.log('selector', selector);
+
+        return $(selector);
+    };
+
+    </script>
+    <style>
+        .cell {
+            width: 300px;
+            height: 40px;
+            border: 1px solid #333;
+            background: #ccc;
+        }
+
+        .animate {
+            -webkit-animation-name: scale;
+            -webkit-animation-duration: 450ms;
+            -webkit-animation-timing-function: ease-out;
+        }
+        @-webkit-keyframes scale {
+            0% {
+                -webkit-transform: scale(0,0);
+            }
+            80% {
+                 -webkit-transform: scale(1.2,1.2);
+            }
+            100% {
+                 -webkit-transform: scale(1,1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!--<a href="/appsuite"><h1>Appsuite</h1></a>-->
+    <a href="#" id="timeout">Timeout tester</a>
+    <a href='#' id="test">Clickhandler test</a>
+    <p id="log"><p>
+    <div id="list">
+        <div id="0" class="cell" data-uid="0">Cell 0 Test</div>
+        <div id="1" class="cell" data-uid="1">Cell 1 Test</div>
+        <div id="2" class="cell" data-uid="2">Cell 2 Test</div>
+        <div id="3" class="cell" data-uid="3">Cell 3 Test</div>
+
+    </div>
+</body>
+
+
+</html>
+
